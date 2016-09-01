@@ -1,4 +1,4 @@
-# onebutton-picam
+# Raspberry Pi One Button Picam PyLib
 
 Python class to interact with a raspberry Pi with a picam and a pull button
 
