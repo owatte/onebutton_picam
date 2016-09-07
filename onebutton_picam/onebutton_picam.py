@@ -82,31 +82,31 @@ class OneButtonPiCam(object):
 
         """
         # cfg ini file
-        self.config_file = config_file
+        self._config_file = config_file
         try:
-            cfg = open(self.config_file, 'r')
-        except (IOError, OSError), e:
-            raise e
+            cfg = open(self._config_file, 'r')
+        except (IOError, OSError), err:
+            raise err
 
-        self._config = ConfigParser.ConfigParser()
-        self._config.read(self.config_file)
+        self.config = ConfigParser.ConfigParser()
+        self.config.read(self._config_file)
         cfg.close()
 
         # work tree
-        self.root_dir = self._config.get('directories', 'root_dir')
+        self.root_dir = self.config.get('directories', 'root_dir')
 
         try:
             os.chdir(self.root_dir)
-        except (IOError, OSError), e:
-            raise e
+        except (IOError, OSError), err:
+            raise err
 
         # raspi GPIO
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
 
         # push button
-        self._button_gpio = self._config.getint('button', 'gpio')
-        self._button_pud_up = self._config.getboolean('button', 'pud_up')
+        self._button_gpio = self.config.getint('button', 'gpio')
+        self._button_pud_up = self.config.getboolean('button', 'pud_up')
         GPIO.setup(self._button_gpio, GPIO.IN, self._button_pud)
 
         # led colours : green, red and orange (
@@ -117,11 +117,12 @@ class OneButtonPiCam(object):
         # When we have the new (r,g,b) led we could use a blue in that case ?
         self.states = {}
         for state in states:
-            self.states[state] = self._config.getint('states', state.lower())
+            self.states[state] = self.config.getint('states', state.lower())
             GPIO.setup(self.states[state], GPIO.OUT)
             GPIO.output(self.states[state], True)
 
         self._show_state_on_led('READY')
+        self.__state = 'READY'
 
     @property
     def _button_pud(self):
@@ -150,6 +151,37 @@ class OneButtonPiCam(object):
         """
         return GPIO.input(self._button_gpio)
 
+    @property
+    def workflow_state(self):
+        """return the button state
+
+        """
+        if self.__state == 'READY':
+            self.__state = 'PROCESSING'
+            self._show_state_on_led(self.__state)
+            self.do_processing()
+        elif self.__state == 'PROCESSING':
+            self.__state = 'POST-PROCESSING'
+            self._show_state_on_led(self.__state)
+            self.do_post_processing()
+            self.__state = 'READY'
+            self._show_state_on_led(self.__state)
+        else:
+            print "Atann' !!! fo ou kalmé'w timal !!!'"
+        return self.__state
+
+    @workflow_state.setter
+    def workflow_state(self, new_state):
+        """return the button state
+
+        """
+        self.__state = new_state
+
+    # @property
+    # def state(self):
+    #     print 'state'
+    #     return 'bitin'
+
     def do_processing(self):
         print 'BEGIN do_processing'
         time.sleep(5)
@@ -164,24 +196,12 @@ class OneButtonPiCam(object):
         return True
 
     def run(self):
-        state = 'READY'
 
         while True:
             if self._button_state == self._button_is_pressed:
-                if state == 'READY':
-                    state = 'PROCESSING'
-                    self._show_state_on_led(state)
-                    self.do_processing()
-                elif state == 'PROCESSING':
-                    state = 'POST-PROCESSING'
-                    self._show_state_on_led(state)
-                    self.do_post_processing()
-                    state = 'READY'
-                    self._show_state_on_led(state)
-                else:
-                    print "Atann' !!! fo ou kalmé'w timal !!!'"
+                print self.workflow_state
             else:
-                if state == 'PROCESSING':
+                if self.__state == 'PROCESSING':
                     self.do_processing()
 
     def _set_led_off(self):
@@ -208,7 +228,7 @@ class OneButtonPiCam(object):
 
 
 def run():
-    action = OneButtonPiCam().run()
+    OneButtonPiCam().run()
 
 if __name__ == '__main__':
     run()
