@@ -153,7 +153,12 @@ class OneButtonPiCam(object):
 
     @property
     def workflow_state(self):
-        """return the button state
+        """Do action depending on the current `workflow_state`
+
+        - do processing or post-processing actions
+        - Change workflow state if needed
+
+        return the button state
 
         """
         if self.__state == 'READY':
@@ -199,7 +204,7 @@ class OneButtonPiCam(object):
 
         while True:
             if self._button_state == self._button_is_pressed:
-                print self.workflow_state
+                self.workflow_state
             else:
                 if self.__state == 'PROCESSING':
                     self.do_processing()
